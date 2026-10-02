@@ -1,0 +1,31 @@
+name: Build APK
+
+# Se dispara solo al subir cambios a la rama "main", y también podés
+# lanzarlo a mano desde la pestaña "Actions" del repositorio en GitHub
+# (botón "Run workflow"), sin necesidad de subir nada nuevo.
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-android:
+    name: Compilar APK para Android
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Compilar con Buildozer
+        uses: ArtemSBulgakov/buildozer-action@v1
+        id: buildozer
+        with:
+          workdir: .
+          buildozer_version: stable
+
+      - name: Subir el APK como resultado
+        uses: actions/upload-artifact@v4
+        with:
+          name: presupuesto-apk
+          path: ${{ steps.buildozer.outputs.filename }}
