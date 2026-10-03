@@ -17,15 +17,29 @@ jobs:
       - name: Descargar el repositorio
         uses: actions/checkout@v4
 
-      - name: Compilar con Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
-        id: buildozer
+      # Antes compilaba con la "acción" de ArtemSBulgakov, que por dentro
+      # intenta instalar un Java más nuevo desde un repositorio de
+      # terceros (ppa:openjdk-r) que todavía no tiene paquetes para la
+      # versión de Ubuntu más reciente ("resolute") -> por eso fallaba
+      # con un error 404, en los dos intentos. Acá se usa DIRECTO la
+      # imagen oficial de Buildozer (la mantiene el propio proyecto
+      # Kivy), que ya trae todo lo necesario, sin ese paso de más.
+      - name: Guardar en caché el SDK/NDK de Android (acelera compilaciones futuras)
+        uses: actions/cache@v4
         with:
-          workdir: .
-          buildozer_version: stable
+          path: .buildozer_global
+          key: buildozer-global-${{ hashFiles('buildozer.spec') }}
+
+      - name: Compilar con la imagen oficial de Buildozer
+        run: |
+          mkdir -p .buildozer_global
+          docker run --rm \
+            --volume "${{ github.workspace }}/.buildozer_global":/home/user/.buildozer \
+            --volume "${{ github.workspace }}":/home/user/hostcwd \
+            ghcr.io/kivy/buildozer:latest android debug
 
       - name: Subir el APK como resultado
         uses: actions/upload-artifact@v4
         with:
           name: presupuesto-apk
-          path: ${{ steps.buildozer.outputs.filename }}
+          path: bin/*.apk
