@@ -504,6 +504,7 @@ class Pastel(Widget):
         self.editable = True           # la app lo pone en False fuera de "Editar porcentajes"
 
         self.seleccionado = None       # índice de la categoría seleccionada
+                                        # (self._fijar_seleccion() lo cambia de acá en más)
         self._arrastre = None          # (idx, "start"/"end") mientras se arrastra
         self._radio = dp(1)
         self._boton_mas = None
@@ -530,7 +531,7 @@ class Pastel(Widget):
         self.canvas.after.clear()
         self.clear_widgets()
         self._piezas = []
-        self.seleccionado = None
+        self._fijar_seleccion(None)
         self._boton_mas = None
 
         n = len(self.p.categorias)
@@ -628,6 +629,22 @@ class Pastel(Widget):
         self._posicionar_manijas()
         self._quitar_boton_mas()
 
+    def _fijar_seleccion(self, idx):
+        """Cambia self.seleccionado y, de paso, apaga o prende el scroll
+        de la pantalla. Importante: el scroll se apaga ACÁ, apenas se
+        selecciona una categoría (aparecen sus puntos) -- no recién
+        cuando ya se logró agarrar un punto. Si no, el primer intento de
+        arrastre rápido (tocar y mover el dedo de una) corre el riesgo de
+        que la pantalla lo interprete como "querés scrollear" antes de
+        que a este widget le llegue siquiera el toque (es un mecanismo
+        del propio ScrollView: si el dedo viaja cierta distancia dentro
+        de los primeros ~55ms, se lo queda él; recién si te quedás
+        quieto ese ratito te lo pasa a este widget). Con el scroll ya
+        apagado desde que seleccionás, ese problema no llega a pasar."""
+        self.seleccionado = idx
+        if self.vista is not None:
+            self.vista.do_scroll_y = (idx is None)
+
     def _punto_borde(self, angulo_grados):
         cx, cy = self.center
         rad = math.radians(angulo_grados)
@@ -707,7 +724,7 @@ class Pastel(Widget):
         dist = math.hypot(dx, dy)
         if dist > self._radio * 1.15:
             self._quitar_boton_mas()
-            self.seleccionado = None
+            self._fijar_seleccion(None)
             self._posicionar_manijas()
             return True
 
@@ -715,15 +732,15 @@ class Pastel(Widget):
         angulo = math.degrees(math.atan2(dx, dy)) % 360.0
         idx = self._segmento_en(angulo)
         if idx is None:
-            self.seleccionado = None
+            self._fijar_seleccion(None)
             self._mostrar_boton_mas(touch.pos, None)
         elif self.p.categorias[idx].get("hueco"):
-            self.seleccionado = None
+            self._fijar_seleccion(None)
             self._mostrar_boton_mas(touch.pos, idx)
         elif idx == self.seleccionado:
-            self.seleccionado = None
+            self._fijar_seleccion(None)
         else:
-            self.seleccionado = idx
+            self._fijar_seleccion(idx)
         self._posicionar_manijas()
         return True
 
@@ -747,7 +764,7 @@ class Pastel(Widget):
             nuevo_idx = self.p.mover_frontera_individual(idx, lado, angulo)
             if nuevo_idx != idx:
                 self._arrastre = (nuevo_idx, lado)
-                self.seleccionado = nuevo_idx
+                self._fijar_seleccion(nuevo_idx)
         else:
             self.p.mover_frontera(idx, lado, angulo)
         self.on_cambio()
@@ -759,7 +776,7 @@ class Pastel(Widget):
             self._arrastre = None
             if self.vista is not None:
                 self.vista.do_scroll_y = True
-            self.seleccionado = self.p.limpiar_huecos(self.seleccionado)
+            self._fijar_seleccion(self.p.limpiar_huecos(self.seleccionado))
             self.on_soltar()
             return True
         return super().on_touch_up(touch)
