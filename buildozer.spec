@@ -26,6 +26,13 @@ fullscreen = 0
 # da a cada app, así que no necesita pedir permisos de almacenamiento.
 android.permissions =
 
+# El SDK de Android pide "aceptar" la licencia de cada paquete antes de
+# instalarlo (como tocar "Acepto" en un instalador). Como en GitHub
+# Actions no hay nadie ahí para tocar ese botón, sin esta línea la
+# compilación se corta con "licenses... were not accepted". Esta línea
+# le dice a Buildozer que las acepte él solo, automáticamente.
+android.accept_sdk_license = True
+
 # No fijo android.api/minapi/ndk a propósito: así Buildozer siempre usa
 # los valores que trae por defecto en la versión que se instale en el
 # momento de compilar (se van actualizando solos con el tiempo). Si algún
